@@ -1,4 +1,6 @@
+import json
 import socket
+from pathlib import Path
 from pynput import mouse, keyboard
 import threading, queue
 
@@ -10,13 +12,16 @@ class Invader:
         self.Stop = False
         self.conn = None
 
-        HOST = '...'
-        PORT = 65432
+        config_path = Path(__file__).with_name('config.json')
+        with config_path.open('r', encoding='utf-8') as f:
+            config = json.load(f)
+
+        HOST = config['HOST']
+        PORT = config['PORT']
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((HOST, PORT))
             s.listen()
-
 
             self.conn, addr = s.accept()
 
