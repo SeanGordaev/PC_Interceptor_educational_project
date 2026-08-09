@@ -1,6 +1,6 @@
-import json
+"""Invader server: collect local input and send control packets over TCP."""
+
 import socket
-from pathlib import Path
 from pynput import mouse, keyboard
 from pynput.mouse import Controller as Controller_mouse
 import threading, queue
@@ -16,13 +16,11 @@ class Invader:
         self.Control_m = Controller_mouse()
         self.Now = time.monotonic()
 
-        config_path = Path(__file__).with_name('config.json')
-        with config_path.open('r', encoding='utf-8') as f:
-            config = json.load(f)
+        HOST = "IP-ADDRESS-INVADER"
+        PORT = "PORT-INVADER"
 
-        HOST = config['HOST']
-        PORT = config['PORT']
-
+        # Start the server socket, accept one client, and begin capturing input.
+        # Keyboard and mouse events are queued and sent from the main loop.
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((HOST, PORT))
             s.listen()
@@ -37,9 +35,11 @@ class Invader:
                 self.SendPacket(packet)
 
     def SendPacket(self, Packet: bytes) -> None:
+        """Send a complete packet to the connected client."""
         self.conn.sendall(Packet)
 
     def CreatePacket(self, Data: tuple[bytes, ...]) -> None:
+        """Build a length-prefixed packet from multiple data parts."""
         packet = b""
         for D in Data:
             print(D.decode())
@@ -47,10 +47,10 @@ class Invader:
         self.DataToSend.put(packet)
 
     def SendControlKB(self, key):
-        # Mod Control
+        # Packet mode: keyboard input.
         mode = "kb".encode()
 
-        # Control
+        # Stop on ESC, otherwise send the pressed key.
         if key == keyboard.Key.esc:
             self.Stop = True
             return
@@ -68,12 +68,13 @@ class Invader:
         if self.Start:
             self.Control_m.position = (0, 0)
             self.Start = False
-        # Mod Control
+
+        # Packet mode: mouse position update.
         mode = "pos".encode()
-        # Control
+        # Control payload: current cursor coordinates.
         Position = f"{x}|{y}".encode()
 
-        # Send Mod and Control
+        # Throttle updates so the client does not receive too many packets.
         self.NewNow = time.monotonic()
         if (self.NewNow - self.Now) > 0.03:
             self.CreatePacket((mode, Position))
@@ -81,12 +82,12 @@ class Invader:
         
     def SendClickMouse(self, x, y, button, pressed):
         if pressed:
-            # Mod Control
+            # Packet mode: mouse click event.
             mode = "click".encode()
-            # Control
+            # Control payload: clicked button name.
             Click = str(button).encode()
 
-            # Send Mod and Control
+            # Send click event to the client.
             self.CreatePacket((mode, Click))
 
     def GetControl(self):
