@@ -6,7 +6,6 @@ from pynput.keyboard import Controller as Controller_Keybooard
 from pynput.mouse import Controller as Controller_mouse
 import time
 
-
 class Victom:
     def __init__(self):
 
@@ -21,6 +20,7 @@ class Victom:
         HOST = config['HOST']
         PORT = config['PORT']
 
+        self.Control_m.position = (0, 0)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.Client:
             self.Client.connect((HOST, PORT))
 
@@ -49,7 +49,7 @@ class Victom:
                     y = int(y)
                     self.Control_m.position = (x, y)
                 elif (Mod == "click"):
-                    Button_name = Control[8:]
+                    Button_name = Control[7:]
                     Button = getattr(mouse.Button, Button_name)
                     self.Control_m.click(Button)
 

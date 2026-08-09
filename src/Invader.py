@@ -2,6 +2,7 @@ import json
 import socket
 from pathlib import Path
 from pynput import mouse, keyboard
+from pynput.mouse import Controller as Controller_mouse
 import threading, queue
 import time
 
@@ -9,8 +10,10 @@ import time
 class Invader:
     def __init__(self):
         self.Stop = False
+        self.Start = True
         self.conn = None
         self.DataToSend = queue.Queue()
+        self.Control_m = Controller_mouse()
         self.Now = time.monotonic()
 
         config_path = Path(__file__).with_name('config.json')
@@ -39,6 +42,7 @@ class Invader:
     def CreatePacket(self, Data: tuple[bytes, ...]) -> None:
         packet = b""
         for D in Data:
+            print(D.decode())
             packet = packet + (len(D).to_bytes(2, "big") + D)
         self.DataToSend.put(packet)
 
@@ -47,6 +51,9 @@ class Invader:
         mode = "kb".encode()
 
         # Control
+        if key == keyboard.Key.esc:
+            self.Stop = True
+            return
         KeyChat = None
         try:
            KeyChat = key.char.encode()
@@ -58,6 +65,9 @@ class Invader:
         
 
     def SendMovementMouse(self, x, y):
+        if self.Start:
+            self.Control_m.position = (0, 0)
+            self.Start = False
         # Mod Control
         mode = "pos".encode()
         # Control
