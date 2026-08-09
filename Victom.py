@@ -36,7 +36,6 @@ class Victom:
                 else:
                     key = KeyPress
                 
-                print(key)
                 self.keyboard.press(key)
                 time.sleep(0.03)
                 self.keyboard.release(key)
