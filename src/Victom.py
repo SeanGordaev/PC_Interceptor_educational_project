@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Shon Gordeev
+# Licensed under the MIT License.
+# See LICENSE in the project root for license information.
+
 """Victom client: receive control packets and replay input remotely."""
 
 import socket

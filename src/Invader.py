@@ -1,4 +1,9 @@
+# Copyright (c) 2026 Shon Gordeev
+# Licensed under the MIT License.
+# See LICENSE in the project root for license information.
+
 """Invader server: collect local input and send control packets over TCP."""
+
 
 import socket
 from pynput import mouse, keyboard
