@@ -2,13 +2,16 @@ import json
 import socket
 from pathlib import Path
 from pynput import mouse, keyboard
-import threading
+import threading, queue
+import time
 
 
 class Invader:
     def __init__(self):
         self.Stop = False
         self.conn = None
+        self.DataToSend = queue.Queue()
+        self.Now = time.monotonic()
 
         config_path = Path(__file__).with_name('config.json')
         with config_path.open('r', encoding='utf-8') as f:
@@ -26,43 +29,71 @@ class Invader:
             Detect = threading.Thread(target=self.GetControl)
             Detect.start()
 
-    def SendControlKB(self, key):
-        # Send The Mod Control
-        mode = "kb".encode()
-        self.conn.sendall(len(mode).to_bytes(1, "big"))
+            while not self.Stop:
+                packet = self.DataToSend.get()
+                self.SendPacket(packet)
 
-        # Send The Control
+    def SendPacket(self, Packet: bytes) -> None:
+        self.conn.sendall(Packet)
+
+    def CreatePacket(self, Data: tuple[bytes, ...]) -> None:
+        packet = b""
+        for D in Data:
+            packet = packet + (len(D).to_bytes(2, "big") + D)
+        self.DataToSend.put(packet)
+
+    def SendControlKB(self, key):
+        # Mod Control
+        mode = "kb".encode()
+
+        # Control
+        KeyChat = None
         try:
            KeyChat = key.char.encode()
-           self.conn.sendall(len(KeyChat).to_bytes(2, "big") + KeyChat)
         except AttributeError:
-            SpKeyChat = str(key).encode()
-            self.conn.sendall(len(SpKeyChat).to_bytes(2, "big") + SpKeyChat)
+            KeyChat = str(key).encode()
+
+        # Send Mod and Control
+        self.CreatePacket((mode, KeyChat))
+        
 
     def SendMovementMouse(self, x, y):
-        # Send The Mod Control
+        # Mod Control
         mode = "pos".encode()
-        self.conn.sendall(len(mode).to_bytes(1, "big"))
-
-        # Send The Control
+        # Control
         Position = f"{x}|{y}".encode()
-        self.conn.sendall(len(Position).to_bytes(2, "big") + Position)
+
+        # Send Mod and Control
+        self.NewNow = time.monotonic()
+        if (self.NewNow - self.Now) > 0.03:
+            self.CreatePacket((mode, Position))
+            self.Now = self.NewNow
         
     def SendClickMouse(self, x, y, button, pressed):
-        # Send The Mod Control
-        mode = "click".encode()
-        self.conn.sendall(len(mode).to_bytes(1, "big"))
-
-        # Send The Control
         if pressed:
+            # Mod Control
+            mode = "click".encode()
+            # Control
             Click = str(button).encode()
-            self.conn.sendall(len(Click).to_bytes(2, "big") + Click)
+
+            # Send Mod and Control
+            self.CreatePacket((mode, Click))
 
     def GetControl(self):
-        with keyboard.Listener(on_press=self.SendControlKB) as listener_kb, \
-            mouse.Listener(on_move=self.SendMovementMouse, on_click=self.SendClickMouse) as listener_mouse:
-            listener_mouse.join()
-            listener_kb.join()
+        listener_mouse = mouse.Listener(
+            on_move=self.SendMovementMouse,
+            on_click=self.SendClickMouse
+        )
+
+        listener_kb = keyboard.Listener(
+            on_press=self.SendControlKB
+        )
+
+        listener_mouse.start()
+        listener_kb.start()
+
+        listener_mouse.join()
+        listener_kb.join()
 
 if __name__ == "__main__":
     I = Invader()
