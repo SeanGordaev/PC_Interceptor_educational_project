@@ -26,13 +26,14 @@ class Victom:
 
             while True:
                 try:
-                    Mod = self.recv_exact(1) # Mod Control
+                    Mod_size = int.from_bytes(self.recv_exact(2), "big") # Size Of Data Control
+                    Mod = self.recv_exact(Mod_size).decode() # Control
                     data_size = int.from_bytes(self.recv_exact(2), "big") # Size Of Data Control
                     Control = self.recv_exact(data_size).decode() # Control
                 except ConnectionError:
                     break
 
-                if (Mod == len("kb".encode())):
+                if (Mod == "kb"):
                     if Control.startswith("Key."):
                         key_name = Control[4:]
                         key = getattr(keyboard.Key, key_name)
@@ -42,15 +43,16 @@ class Victom:
                     self.Control_kb.press(key)
                     time.sleep(0.03)
                     self.Control_kb.release(key)
-                elif (Mod == len("pos".encode())):
+                elif (Mod == "pos"):
                     x, y = Control.split("|")
                     x = int(x)
                     y = int(y)
-                    self.Control_m.move(x, y)
-                elif (Mod == len("click".encode())):
+                    self.Control_m.position = (x, y)
+                elif (Mod == "click"):
                     Button_name = Control[8:]
                     Button = getattr(mouse.Button, Button_name)
-                    self.Control_m.press(Button)
+                    self.Control_m.click(Button)
+
                 
 
     def recv_exact(self, size):
